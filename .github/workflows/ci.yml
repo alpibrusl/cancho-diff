@@ -48,7 +48,7 @@ jobs:
             $C fmt --check src tests
             $C check src/*.cho --std
             for t in tests/*_test.cho; do [ -e "$t" ] && $C test "$t" src/*.cho --std; done
-            ! find src tests -name '*.cho' -exec awk 'END { if (NR > 2000) exit 1 }' {} \; 2>/dev/null || true
+            find src tests -name '*.cho' | xargs -r wc -l | awk '$2 != "total" && $1 > 2000 { print $2 " is over 2000 lines"; bad = 1 } END { exit bad }'
           else
             echo "no sources yet: nothing to check"
           fi
