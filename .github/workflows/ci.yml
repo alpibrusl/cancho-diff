@@ -39,14 +39,13 @@ jobs:
         working-directory: cancho
         run: cargo build --release -p cancho
 
-      # Nothing is built yet: with no sources the gate has nothing to judge and says so. It starts judging the day src/ has a file.
+      # A library has no `main`, so `check` on its own is not a gate: `test` compiles it with its tests.
       - name: Format, check, test
         working-directory: diff
         run: |
           C=../cancho/target/release/cancho
           if ls src/*.cho >/dev/null 2>&1; then
             $C fmt --check src tests
-            $C check src/*.cho --std
             for t in tests/*_test.cho; do [ -e "$t" ] && $C test "$t" src/*.cho --std; done
             find src tests -name '*.cho' | xargs -r wc -l | awk '$2 != "total" && $1 > 2000 { print $2 " is over 2000 lines"; bad = 1 } END { exit bad }'
           else
