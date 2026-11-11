@@ -590,3 +590,69 @@ pub fn diff_stat[&h, &ra, &rb](heap: &!h Heap, a: &ra [byte], b: &rb [byte]) -> 
     unbox_slice(heap, table);
     return (m - lcs, n - lcs);
 }
+
+pub fn hunk_count[&h, &ra, &rb](heap: &!h Heap, a: &ra [byte], b: &rb [byte], context: int) -> [heap] int {
+    if diff_line_eq(a, 0, len(a), b, 0, len(b)) {
+        return 0;
+    }
+    var c = context;
+    if c < 0 {
+        c = 0;
+    }
+    let n = diff_count_lines(a);
+    let m = diff_count_lines(b);
+    let total = n + m;
+    let table = diff_table(heap, a, b);
+    let ops = box_slice(heap, total, 0);
+    var p = total;
+    borrow table as &q in {
+        let cells = contents(q);
+        borrow mut ops as &!o in {
+            let script = contents(o);
+            var i = n;
+            var j = m;
+            while i > 0 || j > 0 {
+                p = p - 1;
+                if i > 0 && j > 0 && diff_line_eq_at(a, i - 1, b, j - 1) {
+                    script[p] = 0;
+                    i = i - 1;
+                    j = j - 1;
+                } else if j > 0 && i == 0 {
+                    script[p] = 2;
+                    j = j - 1;
+                } else if j > 0 && cells[i * (m + 1) + j - 1] >= cells[(i - 1) * (m + 1) + j] {
+                    script[p] = 2;
+                    j = j - 1;
+                } else {
+                    script[p] = 1;
+                    i = i - 1;
+                }
+            }
+        }
+    }
+    unbox_slice(heap, table);
+    let steps = total - p;
+    var hunks = 0;
+    borrow ops as &q in {
+        let whole = contents(q);
+        let script = whole[p..total];
+        var cs = 0;
+        var go = 1;
+        while go == 1 {
+            let first = diff_next_change(script, cs, steps);
+            if first >= steps {
+                go = 0;
+            } else {
+                let last = diff_hunk_last(script, first, steps, c);
+                var he = last + c + 1;
+                if he > steps {
+                    he = steps;
+                }
+                hunks = hunks + 1;
+                cs = he;
+            }
+        }
+    }
+    unbox_slice(heap, ops);
+    return hunks;
+}
