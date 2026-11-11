@@ -577,3 +577,16 @@ pub fn apply[&h, &rp, &ra](heap: &!h Heap, patch: &rp [byte], a: &ra [byte]) -> 
     buffer.drop(heap, out);
     return result.Result::Err(fail);
 }
+
+pub fn diff_stat[&h, &ra, &rb](heap: &!h Heap, a: &ra [byte], b: &rb [byte]) -> [heap] (int, int) {
+    let n = diff_count_lines(a);
+    let m = diff_count_lines(b);
+    let table = diff_table(heap, a, b);
+    var lcs = 0;
+    borrow table as &q in {
+        let cells = contents(q);
+        lcs = cells[n * (m + 1) + m];
+    }
+    unbox_slice(heap, table);
+    return (m - lcs, n - lcs);
+}
